@@ -271,14 +271,14 @@ for alpha, beta, lat_val, bias in best:
 
 **Projekt KRYS — Kryptografia Stosowana**
 
-| Imię i nazwisko | Rola |
-|-----------------|------|
-| Maja Zglinicka | Dokumentacja teoretyczna |
-| Patryk Kosiński | Implementacja DES |
-| Eryk Głąb | Atak różnicowy |
-| Tomasz Lewiński | Atak liniowy |
-| Aleksander Gajowniczek | Integracja i testy |
-| Juliusz Kluge | Analiza MILP |
+| Imię i nazwisko |
+|-----------------|
+| Maja Zglinicka |
+| Patryk Kosiński |
+| Eryk Głąb |
+| Tomasz Lewiński |
+| Aleksander Gajowniczek |
+| Juliusz Kluge |
 
 ---
 
