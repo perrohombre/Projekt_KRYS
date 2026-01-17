@@ -54,7 +54,7 @@ KRYS/
 
 ### 1. Klonowanie repozytorium
 ```bash
-git clone <repo-url>
+git clone https://github.com/perrohombre/Projekt_KRYS
 cd KRYS
 ```
 
