@@ -199,11 +199,11 @@ Liczba par: 500
     ...
 ```
 
-**Uwaga (uczciwy demo):** aktualna implementacja celowo nie obiecuje odzyskania
+**Uwaga:** aktualna implementacja celowo nie obiecuje odzyskania
 podklucza. Oczekiwana różnica wyjściowa S-boksu jest wnioskowana z histogramu
 Δin oraz DDT, bez pełnego filtrowania par zgodnych z charakterystyką. Wyniki
 `score` pokazują mechanikę statystyczną, ale nie muszą wskazywać poprawnych
-6-bitowych fragmentów klucza. To jest demonstracja dydaktyczna, nie pełny atak.
+6-bitowych fragmentów klucza.
 
 ### Demonstracja ataku liniowego (4 rundy)
 
@@ -223,7 +223,7 @@ Szacowana liczba potrzebnych par: 536
     ...
 ```
 
-**Uwaga (uczciwy demo):** przybliżenie liniowe jest dobierane z LAT dla
+**Uwaga:** przybliżenie liniowe jest dobierane z LAT dla
 pojedynczego S-bloku i pokazuje statystyczny bias, ale nie stanowi pełnej
 wielorundowej charakterystyki Matsui. W efekcie demonstracja nie gwarantuje
 odzyskania rzeczywistych fragmentów podklucza.
@@ -245,7 +245,7 @@ odzyskania rzeczywistych fragmentów podklucza.
 2. Atak różnicowy (2⁴⁷) również jest lepszy niż brute-force, ale gorszy od liniowego
 3. Dla zredukowanych wersji DES (≤8 rund) oba ataki są praktycznie wykonalne
 
-**Uwaga o demonstracjach:** moduły ataków są celowo „honest demo” – pokazują
+**Uwaga o demonstracjach:** moduły ataków są celowo demonstracyjne – pokazują
 mechanizm statystyczny (DDT/LAT, bias, liczniki), ale nie gwarantują odzyskania
 klucza w pełnym DES. Dla innych wartości `--rounds` program jawnie używa
 charakterystyk przygotowanych dla 4 rund i informuje o ograniczeniach.
@@ -335,7 +335,3 @@ for alpha, beta, lat_val, bias in best:
 4. Heys, H.M. — *"A Tutorial on Linear and Differential Cryptanalysis"*, Cryptologia, 2002
 
 ---
-
-## 📄 Licencja
-
-Projekt edukacyjny — Politechnika Warszawska, 2026
