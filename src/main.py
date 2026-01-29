@@ -70,14 +70,23 @@ def run_differential_analysis():
     demonstrate_ddt()
 
 
-def run_differential_attack():
+def run_differential_attack(num_rounds: int = 4):
     """Uruchamia demonstrację ataku różnicowego."""
     print("\n" + "=" * 70)
     print(" " * 15 + "DEMONSTRACJA ATAKU RÓŻNICOWEGO")
     print("=" * 70)
     
     from differential_attack import demonstrate_attack
-    demonstrate_attack()
+    
+    if num_rounds != 4:
+        print(f"\n⚠️  Żądana liczba rund: {num_rounds}")
+        print("    Demonstracja używa stałej charakterystyki 4-rundowej.")
+        print("    Użyte rundy: 4")
+        num_rounds = 4
+    
+    print(f"\nUżywane rundy (demo): {num_rounds}")
+    print("Uwaga: pełny DES wymaga ok. 2^47 par dla ataku różnicowego.")
+    demonstrate_attack(num_rounds=num_rounds)
 
 
 def run_linear_analysis():
@@ -91,17 +100,26 @@ def run_linear_analysis():
     demonstrate_piling_up()
 
 
-def run_linear_attack():
+def run_linear_attack(num_rounds: int = 4):
     """Uruchamia demonstrację ataku liniowego."""
     print("\n" + "=" * 70)
     print(" " * 15 + "DEMONSTRACJA ATAKU LINIOWEGO")
     print("=" * 70)
     
     from linear_attack import demonstrate_attack
-    demonstrate_attack()
+    
+    if num_rounds != 4:
+        print(f"\n⚠️  Żądana liczba rund: {num_rounds}")
+        print("    Demonstracja używa stałej charakterystyki 4-rundowej.")
+        print("    Użyte rundy: 4")
+        num_rounds = 4
+    
+    print(f"\nUżywane rundy (demo): {num_rounds}")
+    print("Uwaga: pełny DES wymaga ok. 2^43 par dla ataku liniowego.")
+    demonstrate_attack(num_rounds=num_rounds)
 
 
-def run_all():
+def run_all(num_rounds: int = 4):
     """Uruchamia wszystkie demonstracje."""
     print("\n" + "#" * 70)
     print("#" + " " * 68 + "#")
@@ -133,7 +151,10 @@ def run_all():
     print("\n\n" + "▶" * 30)
     print("FAZA 3: ATAK RÓŻNICOWY")
     print("▶" * 30)
-    run_differential_attack()
+    if num_rounds >= 16:
+        print("\n⚠️  Ostrzeżenie: pełny 16-rundowy DES jest niepraktyczny")
+        print("    dla demonstracyjnych ataków (wymaga ~2^43–2^47 par).")
+    run_differential_attack(num_rounds)
     
     # 4. Analiza LAT
     print("\n\n" + "▶" * 30)
@@ -145,7 +166,10 @@ def run_all():
     print("\n\n" + "▶" * 30)
     print("FAZA 5: ATAK LINIOWY")
     print("▶" * 30)
-    run_linear_attack()
+    if num_rounds >= 16:
+        print("\n⚠️  Ostrzeżenie: pełny 16-rundowy DES jest niepraktyczny")
+        print("    dla demonstracyjnych ataków (wymaga ~2^43–2^47 par).")
+    run_linear_attack(num_rounds)
     
     # Podsumowanie
     print("\n\n" + "#" * 70)
@@ -183,6 +207,8 @@ Przykłady użycia:
                         help='Uruchom analizę tablic LAT')
     parser.add_argument('--all', action='store_true',
                         help='Uruchom wszystkie demonstracje (domyślnie)')
+    parser.add_argument('--rounds', type=int, default=4,
+                        help='Liczba rund używana w demonstracjach ataków (domyślnie 4)')
     
     args = parser.parse_args()
     
@@ -192,18 +218,24 @@ Przykłady użycia:
         args.all = True
     
     if args.all:
-        run_all()
+        run_all(args.rounds)
     else:
         if args.test_des:
             run_des_tests()
         if args.analyze_ddt:
             run_differential_analysis()
         if args.differential:
-            run_differential_attack()
+            if args.rounds >= 16:
+                print("\n⚠️  Ostrzeżenie: pełny 16-rundowy DES jest niepraktyczny")
+                print("    dla demonstracyjnych ataków (wymaga ~2^43–2^47 par).")
+            run_differential_attack(args.rounds)
         if args.analyze_lat:
             run_linear_analysis()
         if args.linear:
-            run_linear_attack()
+            if args.rounds >= 16:
+                print("\n⚠️  Ostrzeżenie: pełny 16-rundowy DES jest niepraktyczny")
+                print("    dla demonstracyjnych ataków (wymaga ~2^43–2^47 par).")
+            run_linear_attack(args.rounds)
 
 
 if __name__ == "__main__":

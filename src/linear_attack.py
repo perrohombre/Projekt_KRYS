@@ -124,6 +124,26 @@ def find_best_approximations(lat: np.ndarray, top_n: int = 5) -> List[Tuple[int,
     return approximations[:top_n]
 
 
+def best_lat_mask(lat: np.ndarray) -> Tuple[int, int, int]:
+    """
+    Zwraca (alpha, beta, lat_value) o maksymalnej wartości |LAT|.
+    Pomija maski zerowe.
+    """
+    best_alpha = 0
+    best_beta = 0
+    best_lat = 0
+    
+    for alpha in range(1, 64):
+        for beta in range(1, 16):
+            lat_val = lat[alpha][beta]
+            if abs(lat_val) > abs(best_lat):
+                best_lat = lat_val
+                best_alpha = alpha
+                best_beta = beta
+    
+    return best_alpha, best_beta, best_lat
+
+
 # ============================================================================
 # LEMAT O STOSIE (PILING-UP LEMMA)
 # ============================================================================
@@ -204,11 +224,11 @@ def build_3_round_characteristic() -> LinearCharacteristic:
     """
     char = LinearCharacteristic(3)
     
-    # S-blok 5 ma najlepsze przybliżenie z biasem ≈ 12/64 = 0.1875
+    # S-blok 5 ma najlepsze przybliżenie z biasem ≈ 20/64 = 0.3125
     # α = 16 (010000), β = 15 (1111)
     
-    # Dla 3 rund bias ≈ 2^2 * (12/64)^3 ≈ 0.026
-    char.bias = 4 * (12/64) ** 3
+    # Dla 3 rund bias ≈ 2^2 * (20/64)^3
+    char.bias = 4 * (20/64) ** 3
     
     return char
 
@@ -253,19 +273,21 @@ class LinearAttack:
         self.characteristic = characteristic
         
     def compute_approximation_value(self,
-                                    plaintext: List[int],
                                     ciphertext: List[int],
                                     subkey_guess: List[int],
-                                    sbox_index: int) -> int:
+                                    sbox_index: int,
+                                    alpha: int,
+                                    beta: int) -> int:
         """
         Oblicza wartość przybliżenia liniowego dla danej pary P-C
         i zgadywanego fragmentu klucza.
         
         Args:
-            plaintext: Tekst jawny (64 bity)
             ciphertext: Szyfrogram (64 bity)
             subkey_guess: Zgadywane 6 bitów podklucza
             sbox_index: Indeks S-bloku
+            alpha: Maska wejściowa (6 bitów)
+            beta: Maska wyjściowa (4 bity)
             
         Returns:
             Wartość przybliżenia (0 lub 1)
@@ -294,14 +316,10 @@ class LinearAttack:
         col = (xored_int >> 1) & 0x0F
         sbox_output = S_BOXES[sbox_index][row][col]
         
-        # Stosujemy maskę wyjściową (dla S5: β = 15 = 1111)
-        output_parity = parity(sbox_output & 0x0F)
+        input_parity = parity(xored_int & alpha)
+        output_parity = parity(sbox_output & beta)
         
-        # Stosujemy maskę wejściową na odpowiednie bity plaintextu
-        # (uproszczone - w pełnej implementacji trzeba to dokładnie wyliczyć)
-        input_parity = parity(bits_to_int(plaintext[0:16]) & 0xFFFF)
-        
-        return input_parity ^ output_parity
+        return 0 if input_parity == output_parity else 1
     
     def attack_sbox(self,
                     pairs: List[Tuple[List[int], List[int]]],
@@ -319,13 +337,20 @@ class LinearAttack:
         counters = defaultdict(int)
         N = len(pairs)
         
+        lat = self.lats[sbox_index]
+        alpha, beta, lat_val = best_lat_mask(lat)
+        bias = abs(lat_val) / 64.0
+        
+        print(f"    S-blok {sbox_index + 1}: wybrane maski "
+              f"α={alpha:02d}, β={beta:02d}, |LAT|={abs(lat_val):02d}, bias={bias:.4f}")
+        
         for plaintext, ciphertext in pairs:
             for key_guess in range(64):
                 key_bits = int_to_bits(key_guess, 6)
                 
                 # Obliczamy wartość przybliżenia
                 approx_val = self.compute_approximation_value(
-                    plaintext, ciphertext, key_bits, sbox_index
+                    ciphertext, key_bits, sbox_index, alpha, beta
                 )
                 
                 # Jeśli przybliżenie jest spełnione, zwiększamy licznik
@@ -434,7 +459,7 @@ def demonstrate_piling_up():
     print("=" * 60)
     
     # Przykład: łączymy przybliżenia z biasami
-    biases = [0.1875, 0.1875, 0.1875]  # 3 rundy z biasem 12/64
+    biases = [0.3125, 0.3125, 0.3125]  # 3 rundy z biasem 20/64
     
     total_bias = piling_up_lemma(biases)
     required_pairs = estimate_required_pairs(total_bias)
@@ -452,7 +477,7 @@ def demonstrate_piling_up():
     print(f"Wymagana liczba par: {full_des_pairs:.2e} ≈ 2^43")
 
 
-def demonstrate_attack():
+def demonstrate_attack(num_rounds: int = 4):
     """Demonstracja ataku liniowego na zredukowany DES."""
     print("\n" + "=" * 60)
     print("DEMONSTRACJA ATAKU LINIOWEGO")
@@ -467,6 +492,12 @@ def demonstrate_attack():
     
     print(f"\nKlucz (do odzyskania): {key_hex}")
     
+    if num_rounds != 4:
+        print(f"\n⚠️  Żądana liczba rund: {num_rounds}")
+        print("    Demonstracja używa stałej charakterystyki 4-rundowej.")
+        print("    Użyte rundy: 4")
+        num_rounds = 4
+    
     # Zbieramy pary tekst jawny - szyfrogram
     num_pairs = 1000
     pairs = []
@@ -478,14 +509,14 @@ def demonstrate_attack():
         plaintext = [random.randint(0, 1) for _ in range(64)]
         
         # Szyfrujemy z ograniczoną liczbą rund
-        ciphertext, _, _ = des_encrypt_block_rounds(plaintext, key_bits, num_rounds=4)
+        ciphertext, _, _ = des_encrypt_block_rounds(plaintext, key_bits, num_rounds=num_rounds)
         
         pairs.append((plaintext, ciphertext))
     
     print(f"    Wygenerowano {len(pairs)} par")
     
     # Przeprowadzamy atak
-    attack = LinearAttack(num_rounds=4)
+    attack = LinearAttack(num_rounds=num_rounds)
     attack.set_characteristic(build_3_round_characteristic())
     
     recovered_keys = attack.run_attack(pairs)

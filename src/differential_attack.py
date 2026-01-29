@@ -328,6 +328,55 @@ class DifferentialAttack:
         best_key = max(scores.keys(), key=lambda k: scores[k]) if scores else 0
         
         return best_key, dict(scores)
+
+    def infer_expected_output_diff(self,
+                                   pairs: List[Tuple],
+                                   sbox_index: int) -> Tuple[int, int, int]:
+        """
+        Wnioskuje oczekiwaną różnicę wyjściową na podstawie histogramu Δin
+        oraz tablicy DDT dla danego S-bloku.
+        
+        Returns:
+            Tuple (delta_in, delta_out, histogram_count)
+        """
+        histogram = defaultdict(int)
+        
+        for _, _, C, C_prime in pairs:
+            after_ip_inv = permute(C, IP)
+            after_ip_inv_prime = permute(C_prime, IP)
+            
+            R16 = after_ip_inv[:32]
+            L16 = after_ip_inv[32:]
+            R16_prime = after_ip_inv_prime[:32]
+            L16_prime = after_ip_inv_prime[32:]
+            
+            R15 = L16
+            R15_prime = L16_prime
+            
+            expanded_R15 = permute(R15, E)
+            expanded_R15_prime = permute(R15_prime, E)
+            
+            start = sbox_index * 6
+            input_bits = expanded_R15[start:start + 6]
+            input_bits_prime = expanded_R15_prime[start:start + 6]
+            
+            delta_in_bits = xor(input_bits, input_bits_prime)
+            delta_in = bits_to_int(delta_in_bits)
+            
+            if delta_in != 0:
+                histogram[delta_in] += 1
+        
+        if histogram:
+            delta_in = max(histogram.items(), key=lambda kv: kv[1])[0]
+            hist_count = histogram[delta_in]
+        else:
+            delta_in = 0
+            hist_count = 0
+        
+        ddt = self.ddts[sbox_index]
+        delta_out = int(np.argmax(ddt[delta_in]))
+        
+        return delta_in, delta_out, hist_count
     
     def run_attack(self, 
                    oracle_func,
@@ -364,9 +413,13 @@ class DifferentialAttack:
         recovered_keys = {}
         
         for sbox_idx in range(8):
-            # Dla uproszczenia zakładamy oczekiwaną różnicę = 0
-            # W pełnym ataku należy to wyliczyć z charakterystyki
-            expected_diff = 0
+            delta_in, expected_diff, hist_count = self.infer_expected_output_diff(
+                pairs, sbox_idx
+            )
+            
+            print(f"    S-blok {sbox_idx + 1}: "
+                  f"Δin={delta_in:02X}, Δout*={expected_diff:02X}, "
+                  f"hist={hist_count}")
             
             best_key, scores = self.attack_sbox(pairs, sbox_idx, expected_diff)
             recovered_keys[sbox_idx] = best_key
@@ -426,7 +479,7 @@ def demonstrate_ddt():
         print(f"Maksymalna wartość (delta_in ≠ 0): {max_val}")
 
 
-def demonstrate_attack():
+def demonstrate_attack(num_rounds: int = 4):
     """Demonstracja ataku różnicowego na 4-rundowy DES."""
     print("\n" + "=" * 60)
     print("DEMONSTRACJA ATAKU RÓŻNICOWEGO")
@@ -441,14 +494,20 @@ def demonstrate_attack():
     
     print(f"\nKlucz (do odzyskania): {key_hex}")
     
+    if num_rounds != 4:
+        print(f"\n⚠️  Żądana liczba rund: {num_rounds}")
+        print("    Demonstracja używa stałej charakterystyki 4-rundowej.")
+        print("    Użyte rundy: 4")
+        num_rounds = 4
+    
     # Tworzymy oracle - funkcję szyfrującą z nieznanym kluczem
     def oracle(plaintext_bits):
         # Używamy zredukowanego DES (4 rundy)
-        ciphertext, _, _ = des_encrypt_block_rounds(plaintext_bits, key_bits, num_rounds=4)
+        ciphertext, _, _ = des_encrypt_block_rounds(plaintext_bits, key_bits, num_rounds=num_rounds)
         return ciphertext
     
     # Przeprowadzamy atak
-    attack = DifferentialAttack(num_rounds=4)
+    attack = DifferentialAttack(num_rounds=num_rounds)
     attack.set_characteristic(build_4_round_characteristic())
     
     recovered_keys = attack.run_attack(oracle, num_pairs=500)
