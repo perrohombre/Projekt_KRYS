@@ -16,7 +16,7 @@ Implementacja umożliwia:
 - Szyfrowanie i deszyfrowanie bloków 64-bitowych algorytmem DES
 - Generowanie tablic DDT (Differential Distribution Table) dla S-bloków
 - Generowanie tablic LAT (Linear Approximation Table) dla S-bloków
-- Przeprowadzenie demonstracyjnych ataków na zredukowane wersje DES (4-8 rund)
+- Przeprowadzenie demonstracyjnych ataków na zredukowany DES (demo 4 rundy)
 - Analizę słabości strukturalnych S-bloków DES
 
 ---
@@ -103,6 +103,14 @@ python main.py --linear          # Demonstracja ataku liniowego
 python main.py --all             # Wszystko (domyślnie)
 ```
 
+**Opcje dodatkowe:**
+```bash
+python main.py --differential --rounds 4
+python main.py --linear --rounds 4
+```
+Uwaga: aktualne demonstracje są przygotowane dla 4 rund i jawnie informują,
+gdy użytkownik poda inną liczbę rund.
+
 ---
 
 ## 📊 Otrzymane wyniki
@@ -182,11 +190,43 @@ Liczba par: 500
     Zebrano 500 par
 
 [2] Atak na S-bloki ostatniej rundy...
-    S-blok 1: klucz = 29, score = 38
-    S-blok 2: klucz = 01, score = 49
-    S-blok 3: klucz = 04, score = 42
+    S-blok 1: Δin=17, Δout*=04, hist=14
+    S-blok 1: klucz = 06, score = 39
+    S-blok 2: Δin=35, Δout*=01, hist=14
+    S-blok 2: klucz = 0F, score = 48
+    S-blok 3: Δin=1F, Δout*=04, hist=12
+    S-blok 3: klucz = 10, score = 44
     ...
 ```
+
+**Uwaga (uczciwy demo):** aktualna implementacja celowo nie obiecuje odzyskania
+podklucza. Oczekiwana różnica wyjściowa S-boksu jest wnioskowana z histogramu
+Δin oraz DDT, bez pełnego filtrowania par zgodnych z charakterystyką. Wyniki
+`score` pokazują mechanikę statystyczną, ale nie muszą wskazywać poprawnych
+6-bitowych fragmentów klucza. To jest demonstracja dydaktyczna, nie pełny atak.
+
+### Demonstracja ataku liniowego (4 rundy)
+
+```
+============================================================
+ATAK LINIOWY NA 4-RUNDOWY DES
+============================================================
+Liczba par: 1000
+Bias charakterystyki: 1.22e-01
+Szacowana liczba potrzebnych par: 536
+
+[1] Atak na S-bloki ostatniej rundy (Algorytm Matsui 2)...
+    S-blok 1: wybrane maski α=16, β=15, |LAT|=18, bias=0.2812
+    S-blok 1: klucz = 30, |T - N/2| = 310
+    S-blok 5: wybrane maski α=16, β=15, |LAT|=20, bias=0.3125
+    S-blok 5: klucz = 20, |T - N/2| = 336
+    ...
+```
+
+**Uwaga (uczciwy demo):** przybliżenie liniowe jest dobierane z LAT dla
+pojedynczego S-bloku i pokazuje statystyczny bias, ale nie stanowi pełnej
+wielorundowej charakterystyki Matsui. W efekcie demonstracja nie gwarantuje
+odzyskania rzeczywistych fragmentów podklucza.
 
 ---
 
@@ -205,6 +245,11 @@ Liczba par: 500
 2. Atak różnicowy (2⁴⁷) również jest lepszy niż brute-force, ale gorszy od liniowego
 3. Dla zredukowanych wersji DES (≤8 rund) oba ataki są praktycznie wykonalne
 
+**Uwaga o demonstracjach:** moduły ataków są celowo „honest demo” – pokazują
+mechanizm statystyczny (DDT/LAT, bias, liczniki), ale nie gwarantują odzyskania
+klucza w pełnym DES. Dla innych wartości `--rounds` program jawnie używa
+charakterystyk przygotowanych dla 4 rund i informuje o ograniczeniach.
+
 ---
 
 ## 🔬 Opis modułów
@@ -220,13 +265,13 @@ Liczba par: 500
 - `compute_ddt()` — obliczanie tablic DDT dla S-bloków
 - `find_best_differentials()` — wyszukiwanie optymalnych przejść
 - `DifferentialCharacteristic` — klasa charakterystyki wielorundowej
-- `DifferentialAttack` — pełny atak z częściowym odszyfrowaniem
+- `DifferentialAttack` — demonstracyjny atak z częściowym odszyfrowaniem
 
 ### `linear_attack.py` — Kryptoanaliza liniowa
 - `compute_lat()` — obliczanie tablic LAT dla S-bloków
 - `piling_up_lemma()` — łączenie przybliżeń (lemat o stosie)
 - `estimate_required_pairs()` — szacowanie liczby par
-- `LinearAttack` — implementacja algorytmu Matsui 2
+- `LinearAttack` — demonstracja algorytmu Matsui 2 (maski z LAT)
 
 ---
 
