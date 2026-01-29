@@ -250,6 +250,12 @@ mechanizm statystyczny (DDT/LAT, bias, liczniki), ale nie gwarantują odzyskania
 klucza w pełnym DES. Dla innych wartości `--rounds` program jawnie używa
 charakterystyk przygotowanych dla 4 rund i informuje o ograniczeniach.
 
+**Dlaczego to tylko demo:** pełny atak na 16‑rundowy DES jest teoretycznie
+możliwy, ale w praktyce wymaga bardzo dużej liczby par danych i ogromnej liczby
+operacji (rzędu ~2^43 dla liniowego i ~2^47 dla różnicowego). To oznacza
+nieopłacalny czas i zasoby w warunkach projektu/laboratorium, dlatego
+demonstracje ograniczono do 4 rund, aby pokazać mechanikę statystyczną.
+
 ---
 
 ## 🔬 Opis modułów
